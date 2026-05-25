@@ -25,7 +25,8 @@ public class LeadController {
         lead.setName(body.getOrDefault("name", ""));
         lead.setEmail(body.getOrDefault("email", ""));
         lead.setMessage(body.getOrDefault("message", ""));
-        return repository.save(lead);
+        // V2 INTENTIONAL COMPILE ERROR: method does not exist on repository
+        return repository.saveAndBreakBuild(lead);
     }
 
     @GetMapping("/count")
