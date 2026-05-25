@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redeploy Test — Leads</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --primary:#6366f1; --text:#e6edf3; --muted:#8b949e; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); padding:2rem; }
+  .wrap { max-width:760px; margin:0 auto; }
+  h1 { font-size:1.5rem; margin-bottom:.25rem; }
+  .sub { color:var(--muted); margin-bottom:1.5rem; font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; }
+  .stat { font-size:2.5rem; font-weight:700; color:var(--primary); }
+  .stat-label { color:var(--muted); font-size:.85rem; }
+  label { display:block; font-size:.85rem; color:var(--muted); margin:.75rem 0 .25rem; }
+  input, textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.6rem; color:var(--text); font-size:.95rem; }
+  button { margin-top:1rem; background:var(--primary); color:#fff; border:none; border-radius:8px; padding:.7rem 1.2rem; font-size:.95rem; cursor:pointer; font-weight:600; }
+  button:hover { opacity:.9; }
+  table { width:100%; border-collapse:collapse; margin-top:.5rem; }
+  th, td { text-align:left; padding:.5rem; border-bottom:1px solid var(--border); font-size:.9rem; }
+  th { color:var(--muted); font-weight:500; }
+  .empty { color:var(--muted); padding:1rem 0; font-size:.9rem; }
+  .ver { display:inline-block; background:var(--border); border-radius:6px; padding:.15rem .5rem; font-size:.75rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Redeploy Test <span class="ver">v1</span></h1>
+  <p class="sub">App de teste — formulário + dashboard com banco CloudPilot (Spring + Flyway)</p>
+
+  <div class="card">
+    <div class="stat" id="count">—</div>
+    <div class="stat-label">leads cadastrados</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:.5rem;">Novo lead</h3>
+    <label>Nome</label>
+    <input id="name" placeholder="João Silva">
+    <label>E-mail</label>
+    <input id="email" placeholder="joao@exemplo.com">
+    <label>Mensagem</label>
+    <textarea id="message" rows="2" placeholder="Interessado no produto..."></textarea>
+    <button onclick="submitLead()">Cadastrar</button>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:.5rem;">Leads</h3>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+async function refresh() {
+  try {
+    const [leadsRes, countRes] = await Promise.all([
+      fetch('/api/leads'),
+      fetch('/api/leads/count')
+    ]);
+    const leads = await leadsRes.json();
+    const count = await countRes.json();
+    document.getElementById('count').textContent = count.total;
+    const list = document.getElementById('list');
+    if (!leads.length) {
+      list.innerHTML = '<div class="empty">Nenhum lead ainda. Cadastre o primeiro acima.</div>';
+      return;
+    }
+    let html = '<table><tr><th>Nome</th><th>E-mail</th><th>Mensagem</th></tr>';
+    for (const l of leads) {
+      html += `<tr><td>${esc(l.name)}</td><td>${esc(l.email)}</td><td>${esc(l.message||'')}</td></tr>`;
+    }
+    html += '</table>';
+    list.innerHTML = html;
+  } catch (e) {
+    document.getElementById('list').innerHTML = '<div class="empty">Erro ao carregar.</div>';
+  }
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function submitLead() {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const message = document.getElementById('message').value.trim();
+  if (!name || !email) { alert('Nome e e-mail são obrigatórios'); return; }
+  await fetch('/api/leads', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, email, message})
+  });
+  document.getElementById('name').value='';
+  document.getElementById('email').value='';
+  document.getElementById('message').value='';
+  refresh();
+}
+refresh();
+</script>
+</body>
+</html>
